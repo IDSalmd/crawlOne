@@ -17,7 +17,7 @@ class ScapeCallback:
 
     def __call__(self, url, html):
         if re.search('/view',url):
-            tree = lxml.html.fromstring(html)
+            tree = lxmlTest.html.fromstring(html)
             row = []
             for field in self.fields:
                 row.append(tree.cssselect('table > tr#places_{}__row > td.w2p_fw'
