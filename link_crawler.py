@@ -34,13 +34,16 @@ def download(url, headers, proxy, num_retries, data=None):
 
 
 def link_crawler(seed_url, link_regex=None, delay=5, max_depth=-1, max_urls=-1,
-                 headers=None, user_agent='wswp', proxy=None, num_retries=1,scrape_callback=None):
+                 headers=None, user_agent='GoodCrawler', proxy=None, num_retries=1,scrape_callback=None):
     """Crawl from the given seed URL following links matched by link_regex
     """
     # the queue of URL's that still need to be crawled
+    # 对于可能会出现重复进出队列的地址，由下面的seen控制
     crawl_queue = Queue.deque([seed_url])
+
     # the URL's that have been seen and at what depth
-    # seen 里面存在表示下载过，value不是下载次数，是深度
+    # 功能1 ：value表示这个link的深度，第几次跳转后获取的这个链接
+    # 功能2 ：in seen 表示已经下载过，不会放入下载deque
     seen = {seed_url: 0}
     # track how many URL's have been downloaded
     num_urls = 0
@@ -59,7 +62,8 @@ def link_crawler(seed_url, link_regex=None, delay=5, max_depth=-1, max_urls=-1,
         #检查地图属性中限制条件
         #Returns True if the useragent is allowed to fetch the url according to
         # the rules contained in the parsed robots.txt file.
-        if rp.can_fetch(user_agent, url):
+        #if rp.can_fetch(user_agent, url):
+        if 1:
             throttle.wait(url)
             html = download(url, headers, proxy=proxy, num_retries=num_retries)
             links = []
@@ -87,7 +91,7 @@ def link_crawler(seed_url, link_regex=None, delay=5, max_depth=-1, max_urls=-1,
             if num_urls == max_urls:
                 break
         else:
-            print 'Blocked by robots.txt(line 87):',url
+            print 'Blocked by robots.txt(line 93):',url
 
 def same_domain(url1, url2):
     '''
@@ -154,5 +158,6 @@ def get_robots(url):
 
 if __name__ == '__main__':
     #link_crawler('http://example.webscraping.com', '/(index|view)', delay=0, num_retries=1, user_agent='BadCrawler')
-    link_crawler('http://example.webscraping.com/', '/(index|view)',delay=0, num_retries=1, max_depth=1, user_agent='GoodCrawler')
+    link_crawler('http://example.webscraping.com/', '/(index|view)',delay=0,
+                 num_retries=1, max_depth=1, user_agent='GoodCrawler')
 
