@@ -7,32 +7,6 @@ from datetime import datetime
 import robotparser
 import Queue
 
-
-
-def download(url, headers, proxy, num_retries, data=None):
-    print 'Downloading:', url
-    request = urllib2.Request(url, data, headers)
-    opener = urllib2.build_opener()
-    if proxy:
-        proxy_params = {urlparse.urlparse(url).scheme: proxy}
-        opener.add_handler(urllib2.ProxyHandler(proxy_params))
-    try:
-        response = opener.open(request)
-        html = response.read()
-        code = response.code
-    except urllib2.URLError as e:
-        print 'Download error(lin24):', e.reason
-        html = ''
-        if hasattr(e, 'code'):
-            code = e.code
-            if num_retries > 0 and 500 <= code < 600:
-                # retry 5XX HTTP errors
-                html = download(url, headers, proxy, num_retries-1, data)
-        else:
-            code = None
-    return html
-
-
 def link_crawler(seed_url, link_regex=None, delay=5, max_depth=-1, max_urls=-1,
                  headers=None, user_agent='GoodCrawler', proxy=None, num_retries=1,scrape_callback=None):
     """Crawl from the given seed URL following links matched by link_regex
@@ -62,8 +36,8 @@ def link_crawler(seed_url, link_regex=None, delay=5, max_depth=-1, max_urls=-1,
         #检查地图属性中限制条件
         #Returns True if the useragent is allowed to fetch the url according to
         # the rules contained in the parsed robots.txt file.
-        #if rp.can_fetch(user_agent, url):
-        if 1:
+        if rp.can_fetch(user_agent, url):
+        #if 1:
             throttle.wait(url)
             html = download(url, headers, proxy=proxy, num_retries=num_retries)
             links = []
@@ -93,39 +67,6 @@ def link_crawler(seed_url, link_regex=None, delay=5, max_depth=-1, max_urls=-1,
         else:
             print 'Blocked by robots.txt(line 93):',url
 
-def same_domain(url1, url2):
-    '''
-    .netloc e.g  ‘bitbucket.org’
-    :param url1:
-    :param url2:
-    :return:
-    '''
-    return urlparse.urlparse(url1).netloc == urlparse.urlparse(url2).netloc
-
-
-def normalize(seed_url, link):
-    '''
-    把seed_url,和从里面抓取的link,拼成一个整体的link
-    :param seed_url:
-    :param link:
-    :return:
-    '''
-    #urldefrag
-    #fragment  拆分文档中的特殊锚  '#'后面的部分
-    #返回元组(newurl, fragment), 其中newurl是片段的url部分, fragment是包含片段部分的字符串(如果有)
-    # return tuple(defragmented, fragment)
-    link, _ = urlparse.urldefrag(link)
-    return urlparse.urljoin(seed_url, link)
-
-def get_links(html):
-    '''
-    从html里面获取links,返回 list
-    :param html:
-    :return:
-    '''
-    webpage_regex = re.compile('<a[^>]+href=["\'](.*?)["\']', re.IGNORECASE)
-    return webpage_regex.findall(html)
-
 class Throttle:
     """Throttle downloading by sleeping between requests to same domain
     """
@@ -145,8 +86,51 @@ class Throttle:
                 time.sleep(sleep_secs)
         self.domains[domain] = datetime.now()
 
+def download(url, headers, proxy, num_retries, data=None):
+    print 'Downloading:', url
+    request = urllib2.Request(url, data, headers)
+    opener = urllib2.build_opener()
+    if proxy:
+        proxy_params = {urlparse.urlparse(url).scheme: proxy}
+        opener.add_handler(urllib2.ProxyHandler(proxy_params))
+    try:
+        response = opener.open(request)
+        html = response.read()
+        code = response.code
+    except urllib2.URLError as e:
+        print 'Download error(lin24):', e.reason
+        html = ''
+        if hasattr(e, 'code'):
+            code = e.code
+            if num_retries > 0 and 500 <= code < 600:
+                # retry 5XX HTTP errors
+                html = download(url, headers, proxy, num_retries-1, data)
+        else:
+            code = None
+    return html
 
+def normalize(seed_url, link):
+    '''
+    把seed_url,和从里面抓取的link,拼成一个整体的link
+    :param seed_url:
+    :param link:
+    :return:
+    '''
+    #urldefrag
+    #fragment  拆分文档中的特殊锚  '#'后面的部分
+    #返回元组(newurl, fragment), 其中newurl是片段的url部分, fragment是包含片段部分的字符串(如果有)
+    # return tuple(defragmented, fragment)
+    link, _ = urlparse.urldefrag(link)
+    return urlparse.urljoin(seed_url, link)
 
+def same_domain(url1, url2):
+    '''
+    .netloc e.g  ‘bitbucket.org’
+    :param url1:
+    :param url2:
+    :return:
+    '''
+    return urlparse.urlparse(url1).netloc == urlparse.urlparse(url2).netloc
 
 def get_robots(url):
     """Initialize robots parser for this domain
@@ -155,6 +139,15 @@ def get_robots(url):
     rp.set_url(urlparse.urljoin(url, '/robots.txt'))
     rp.read()
     return rp
+
+def get_links(html):
+    '''
+    从html里面获取links,返回 list
+    :param html:
+    :return:
+    '''
+    webpage_regex = re.compile('<a[^>]+href=["\'](.*?)["\']', re.IGNORECASE)
+    return webpage_regex.findall(html)
 
 if __name__ == '__main__':
     #link_crawler('http://example.webscraping.com', '/(index|view)', delay=0, num_retries=1, user_agent='BadCrawler')

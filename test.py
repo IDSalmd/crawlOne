@@ -35,8 +35,9 @@ for x in tree.cssselect(reg):
 
     print x.text_content()
 
-for  field in fields:
+for  field in range(1):
     reg = 'table > tr#places_{}__row > td.w2p_fw'.format(field)
+    reg = 'div#content'
     #print reg
     element =  tree.cssselect(reg)
     #print element[0].text_content()
